@@ -1,3 +1,4 @@
+// Dán toàn bộ code của MainActivity.java đã cải tiến ở trên vào đây
 package com.example.unitconverter;
 
 import android.os.Bundle;
@@ -5,120 +6,107 @@ import android.view.View;
 import android.widget.EditText;
 import android.widget.Spinner;
 import android.widget.Toast;
-import androidx.activity.EdgeToEdge;
 import androidx.appcompat.app.AppCompatActivity;
-import androidx.core.graphics.Insets;
-import androidx.core.view.ViewCompat;
-import androidx.core.view.WindowInsetsCompat;
+
+import java.util.Locale;
 
 public class MainActivity extends AppCompatActivity {
-    EditText etConvertedValue; // This seems unused, but keeping it as is
+
+    // Define UI elements
+    private EditText etValueToConvert;
+    private EditText etConvertedValue;
+    private Spinner spinnerFromUnit;
+    private Spinner spinnerToUnit;
+
+    /**
+     * Enum to manage length units and their conversion factors relative to a base unit (Meter).
+     * This makes the code clean, type-safe, and easy to extend.
+     */
+    public enum LengthUnit {
+        METER(1.0),
+        MILLIMETER(0.001),
+        MILE(1609.34),
+        FOOT(0.3048);
+
+        private final double toMetersFactor;
+
+        LengthUnit(double toMetersFactor) {
+            this.toMetersFactor = toMetersFactor;
+        }
+
+        public double getToMetersFactor() {
+            return toMetersFactor;
+        }
+    }
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-        // EdgeToEdge.enable(this);
         setContentView(R.layout.activity_main);
-        // ViewCompat.setOnApplyWindowInsetsListener(findViewById(R.id.main), (v, insets) -> {
-        //     Insets systemBars = insets.getInsets(WindowInsetsCompat.Type.systemBars());
-        //     v.setPadding(systemBars.left, systemBars.top, systemBars.right, systemBars.bottom);
-        //     return insets;
-        // });
+
+        // Initialize views
+        initializeViews();
     }
 
+    /**
+     * Finds and assigns all UI views to their corresponding variables.
+     */
+    private void initializeViews() {
+        etValueToConvert = findViewById(R.id.etValueToConvert);
+        etConvertedValue = findViewById(R.id.etConvertedValue);
+        spinnerFromUnit = findViewById(R.id.spinnerFromUnit);
+        spinnerToUnit = findViewById(R.id.spinnerToUnit);
+    }
+
+    /**
+     * Handles the click event of the "CONVERT" button.
+     * @param v The view that was clicked (the button).
+     */
     public void onConvertClick(View v) {
-        Spinner sp1 = (Spinner) findViewById(R.id.spinner1);
-        String choice1 = sp1.getSelectedItem().toString(); // Source unit
-        Spinner sp2 = (Spinner) findViewById(R.id.spinner2);
-        String choice2 = sp2.getSelectedItem().toString(); // Target unit
-        EditText ed1 = (EditText) findViewById(R.id.etValue1);
-        EditText ed2 = (EditText) findViewById(R.id.etValue2);
+        // 1. Get user input string
+        String inputStr = etValueToConvert.getText().toString();
 
-        // Validate input: Check if empty or not a valid number
-        String inputStr = ed1.getText().toString();
+        // 2. Validate input
         if (inputStr.isEmpty()) {
-            Toast.makeText(this, "Please enter a value", Toast.LENGTH_SHORT).show();
+            Toast.makeText(this, R.string.error_please_enter_value, Toast.LENGTH_SHORT).show();
             return;
         }
 
-        double value1;
+        double inputValue;
         try {
-            value1 = Double.parseDouble(inputStr);
+            inputValue = Double.parseDouble(inputStr);
         } catch (NumberFormatException e) {
-            Toast.makeText(this, "Invalid input: Please enter a number", Toast.LENGTH_SHORT).show();
+            Toast.makeText(this, R.string.error_invalid_number, Toast.LENGTH_SHORT).show();
             return;
         }
 
-        double value2 = 0;
+        // 3. Get selected units from spinners
+        String fromUnitStr = spinnerFromUnit.getSelectedItem().toString().toUpperCase(Locale.ROOT);
+        String toUnitStr = spinnerToUnit.getSelectedItem().toString().toUpperCase(Locale.ROOT);
 
-        // Conversion logic using switch for source and target units
-        switch (choice1) {
-            case "Meter":
-                switch (choice2) {
-                    case "Meter":
-                        value2 = value1;
-                        break;
-                    case "Millimeter":
-                        value2 = value1 * 1000;
-                        break;
-                    case "Mile":
-                        value2 = value1 * 0.000621371;
-                        break;
-                    case "Foot":
-                        value2 = value1 * 3.28084;
-                        break;
-                }
-                break;
-            case "Millimeter":  // Fixed typo from "Milllimeter"
-                switch (choice2) {
-                    case "Meter":
-                        value2 = value1 / 1000;
-                        break;
-                    case "Millimeter":
-                        value2 = value1;
-                        break;
-                    case "Mile":
-                        value2 = value1 * 0.000000621371;
-                        break;
-                    case "Foot":
-                        value2 = value1 * 0.00328084;
-                        break;
-                }
-                break;
-            case "Mile":
-                switch (choice2) {
-                    case "Meter":
-                        value2 = value1 * 1609.34;
-                        break;
-                    case "Millimeter":
-                        value2 = value1 * 1609340;
-                        break;
-                    case "Mile":
-                        value2 = value1;
-                        break;
-                    case "Foot":
-                        value2 = value1 * 5280;
-                        break;
-                }
-                break;
-            case "Foot":
-                switch (choice2) {
-                    case "Meter":
-                        value2 = value1 * 0.3048;
-                        break;
-                    case "Millimeter":
-                        value2 = value1 * 304.8;
-                        break;
-                    case "Mile":
-                        value2 = value1 * 0.000189394;
-                        break;
-                    case "Foot":
-                        value2 = value1;
-                        break;
-                }
-                break;
-        }
+        LengthUnit fromUnit = LengthUnit.valueOf(fromUnitStr);
+        LengthUnit toUnit = LengthUnit.valueOf(toUnitStr);
 
-        ed2.setText(String.valueOf(value2));
+        // 4. Perform conversion
+        double result = convert(inputValue, fromUnit, toUnit);
+
+        // 5. Display the result
+        etConvertedValue.setText(String.valueOf(result));
+    }
+
+    /**
+     * Converts a value from a source unit to a target unit using a base unit (Meter).
+     * @param value The numerical value to convert.
+     * @param fromUnit The source LengthUnit.
+     * @param toUnit The target LengthUnit.
+     * @return The converted value.
+     */
+    private double convert(double value, LengthUnit fromUnit, LengthUnit toUnit) {
+        // Step 1: Convert the input value to the base unit (Meters).
+        double valueInMeters = value * fromUnit.getToMetersFactor();
+
+        // Step 2: Convert the value from the base unit to the target unit.
+        double result = valueInMeters / toUnit.getToMetersFactor();
+        return Math.round(result * 10000.0) / 10000.0;
     }
 }
